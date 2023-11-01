@@ -6,7 +6,11 @@
 ################################################################################
 # Adapted the code from dynamixel sdk python example
 # If you have any question, please reach out to wkdo@stanford.edu
-# Won Kyung Do, ph.D. Student in Mechanical Engineering at Stanford University, advised by Prof. Monroe Kennedy III
+# Won Kyung Do, Ph.D. Student in Mechanical Engineering at Stanford University, advised by Prof. Monroe Kennedy III
+
+# moment of inertia: 3.2e-7 kgm^2
+# mass: 0.002kg 
+
 
 import os
 import cv2
@@ -182,7 +186,6 @@ class RobotThread(threading.Thread):
             if self.flag:
                 current_position, dxl_comm_result, dxl_error = self.rc.packetHandler.read4ByteTxRx(self.rc.portHandler, self.rc.dxl_id, self.rc.goal_position_addr)
 
-
                 if dxl_comm_result != COMM_SUCCESS:
                     print("%s" % self.rc.packetHandler.getTxRxResult(dxl_comm_result))
                 elif dxl_error != 0:
@@ -193,8 +196,8 @@ class RobotThread(threading.Thread):
                     # from 4 value of position array, get average velocity
                     velocity = (self.position_array[3] - self.position_array[0])/4
 
-                    # experimental setup
-                    new_position = 1550 + int((center_x - 335)*0.3) - int((current_position - 1550)*damping_factor) - int(velocity*0.1)
+                    ##### experiment code
+                    # new_position = 1550 + int((center_x - 335)*0.3) - int((current_position - 1550)*damping_factor) - int(velocity*0.1)
 
                     pos = ((center_x - 335)*0.00025)
                     # vel = (velocity*0.01)
@@ -207,10 +210,6 @@ class RobotThread(threading.Thread):
                     theta = 90-theta*180/np.pi
                     dyna_theta = 1550 + (theta/360)*4000
                     new_position = int(dyna_theta)
-
-# moment of inertia: 3.2e-7 kgm^2
-# mass: 0.002kg 
-
 
                     if new_position < self.rc.dxl_min_pos_val:
                         new_position = self.rc.dxl_min_pos_val

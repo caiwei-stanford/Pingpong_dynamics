@@ -31,6 +31,35 @@ pip install opencv-python
 - 'venv' is the virtual environment for the code. Feel free to add pytorch package to run the RL controller.
 - 'design' folder contains the ai file I used for laser cutting as well as the design file of the balancing platform. 
 
+## Code description
+
+``pingpong.py`` controls the pingpong ball from the camera input. For the basic template, you can manipulate ping-pong ball in the camera frame window by pressing following keys: 
+
+- 'q' : turn off the controller
+- 'w' : toggle to run/stop the basic PD controller based on the camera input 
+- 'e' : rotate the bar counter-clockwise
+- 'r' : rotate the bar clockwise
+
+
+### Running camera
+
+Before first running, we need to change the default camera property. please uncomment following in line 124-131:
+
+```
+        # self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
+        # self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+        # self.cap.set(cv2.CAP_PROP_FPS, 60)
+        # self.cap.set(cv2.CAP_PROP_FOURCC,cv2.VideoWriter_fourcc('M','J','P','G'))
+        # # set the focus to infinity
+        # self.cap.set(cv2.CAP_PROP_FOCUS, 0)
+        # # make sure auto exposure and auto white balance are turned off
+        # self.cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, 0.25)
+```
+Those setup code slows the startup of the code, so you can re-comment them after setup the camera property.
+
+### Controller 
+
+Main PD controller code are in line 187 - 219. Please feel free to add another controller using variables defined here. 
 
 ## Design instruction
 
