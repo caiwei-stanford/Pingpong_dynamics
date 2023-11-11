@@ -47,9 +47,13 @@ class RobotController:
 
         # Default setting
         self.dxl_id = 1                 # Dynamixel ID : 1
-        self.baudrate = 1000000             # Dynamixel default baudrate : 57600
-        self.devicename = 'COM4'    # Check which port is being used on your controller
+        if os.name == 'nt':
+            self.baudrate = 1000000             # Dynamixel default baudrate : 57600
+            self.devicename = 'COM4'    # Check which port is being used on your controller
                                 # ex) Windows: "COM1"   Linux: "/dev/ttyUSB0" Mac: "/dev/tty.usbserial-*"
+        else:
+            self.baudrate = 57600             # Dynamixel default baudrate : 57600
+            self.devicename = '/dev/tty.usbserial-FT7W9245' # Mac: ls /dev/tty.usbserial-*
 
         self.torque_enable = 1                 # Value for enabling the torque
         self.torque_disable = 0                 # Value for disabling the torque
@@ -275,11 +279,12 @@ if __name__ == '__main__':
     video_index = 0
     robot_controller = RobotController()
     robot_thread = RobotThread(robot_controller)
+    if os.name == 'nt':
+        robot_thread.start()
+        robot_thread.join()
+    else:
+        robot_thread.run()
 
-
-    robot_thread.start()
-
-    robot_thread.join()
 
 
 
