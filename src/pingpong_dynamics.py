@@ -20,13 +20,14 @@ class RobotOperator:
                 fig = plt.figure(figsize=(12, 6))
                 ax = [fig.add_subplot(1,2,1), fig.add_subplot(1,2,2)]
             except NameError: print('plt not defined'); return
+        # plot data history as function of time
         ax[0].clear()
         ax[0].plot(data[:,0], data[:,1], 'r-')
         ax[0].plot(data[:,0], data[:,2], 'm-')
         ax[0].plot(data[:,0], data[:,3], 'b-')
         ax[0].set_xlabel('time (s)')
 
-        # To do: show animation
+        # show animation of the ball on lever
         ax[1].clear()
         draw_lever_radius = 0.25
         background_circle = plt.Circle((0, 0), draw_lever_radius, color='k', fill=False)
@@ -34,6 +35,8 @@ class RobotOperator:
         ax[1].set_aspect('equal')
         ax[1].set_xlim([-0.3, 0.3])
         ax[1].set_ylim([-0.3, 0.3])
+        ax[1].set_xlabel('x (m)')
+        ax[1].set_ylabel('y (m)')
         draw_angle = data[-1,3]
         draw_ball_position = np.array([data[-1,1], data[-1,2]])
         draw_ball_radius = 0.02
