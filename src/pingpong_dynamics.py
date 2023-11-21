@@ -16,22 +16,41 @@ class RobotOperator:
 
     def plot_data(self, data, fig=None, ax=None, block=False, pause_seconds=0.01):
         if fig==None:
-            try: fig, ax = plt.subplots()
+            try:
+                fig = plt.figure(figsize=(12, 6))
+                ax = [fig.add_subplot(1,2,1), fig.add_subplot(1,2,2)]
             except NameError: print('plt not defined'); return
-        ax.clear()
-        ax.plot(data[:,0], data[:,1], 'r-')
-        ax.plot(data[:,0], data[:,2], 'm-')
-        ax.plot(data[:,0], data[:,3], 'b-')
-        ax.set_xlabel('time (s)')
+        ax[0].clear()
+        ax[0].plot(data[:,0], data[:,1], 'r-')
+        ax[0].plot(data[:,0], data[:,2], 'm-')
+        ax[0].plot(data[:,0], data[:,3], 'b-')
+        ax[0].set_xlabel('time (s)')
 
         # To do: show animation
+        ax[1].clear()
+        draw_lever_radius = 0.25
+        background_circle = plt.Circle((0, 0), draw_lever_radius, color='k', fill=False)
+        ax[1].add_artist(background_circle)
+        ax[1].set_aspect('equal')
+        ax[1].set_xlim([-0.3, 0.3])
+        ax[1].set_ylim([-0.3, 0.3])
+        draw_angle = data[-1,3]
+        draw_ball_position = np.array([data[-1,1], data[-1,2]])
+        draw_ball_radius = 0.02
+        draw_ball = plt.Circle(draw_ball_position, draw_ball_radius, color='r', fill=False)
+        draw_lever = plt.Line2D([-draw_lever_radius*np.cos(draw_angle), draw_lever_radius*np.cos(draw_angle)],
+                                [-draw_lever_radius*np.sin(draw_angle), draw_lever_radius*np.sin(draw_angle)], color='b')
+        ax[1].add_artist(draw_ball)
+        ax[1].add_artist(draw_lever)
 
         plt.draw()
         plt.show(block=block)
         plt.pause(pause_seconds)
 
     def run(self):
-        try: fig, ax = plt.subplots()
+        try:
+             fig = plt.figure(figsize=(12, 6))
+             ax = [fig.add_subplot(1,2,1), fig.add_subplot(1,2,2)]
         except NameError: print('plt not defined');
 
         try:
