@@ -10,8 +10,13 @@ class RobotSimulator(threading.Thread):
     """
     def __init__(self, time_step=0.01, report_period=0.2, ring_buff_size=10000):
         threading.Thread.__init__(self)
-        self._lever_angle = 0
-        self._ball_position = np.array([0.0, 0.0])
+        self._lever_angle = 0                       # in radians
+        self._ball_position = np.array([0.0, 0.0])  # in meters
+        self._ball_r = 0.0        # internal DOF: ball position along the lever
+        self._ball_r_dot = 0.0    # internal DOF: ball velocity along the lever
+        self._ball_r_max = 0.2
+        self._lever_angle_max = 1.3
+        self._lever_angle_min = -1.3
         self._start_time = 0
         self._current_time = 0
         self._time_step = time_step
@@ -35,8 +40,16 @@ class RobotSimulator(threading.Thread):
 
         To do: replace this with a physics simulation
         """
-        self._ball_position += np.random.normal(0, 0.01, 2)
+        self._ball_r += np.random.normal(0, 0.01, 1)
+        self._ball_r = min([self._ball_r, self._ball_r_max])
+        self._ball_r = max([self._ball_r, -self._ball_r_max])
+
         self._lever_angle += np.random.normal(0, 0.01, 1)
+        self._lever_angle = min([self._lever_angle, self._lever_angle_max])
+        self._lever_angle = max([self._lever_angle, self._lever_angle_min])
+
+        self._ball_position[0] = self._ball_r * np.cos(self._lever_angle)
+        self._ball_position[1] = self._ball_r * np.sin(self._lever_angle)
         time.sleep(0.0012)
 
     def run(self):
