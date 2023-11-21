@@ -29,12 +29,12 @@ class RobotOperator:
 
         # show animation of the ball on lever
         ax[1].clear()
-        draw_lever_radius = 0.25
+        draw_lever_radius = 0.22
         background_circle = plt.Circle((0, 0), draw_lever_radius, color='k', fill=False)
         ax[1].add_artist(background_circle)
         ax[1].set_aspect('equal')
-        ax[1].set_xlim([-0.3, 0.3])
-        ax[1].set_ylim([-0.3, 0.3])
+        ax[1].set_xlim([-0.25, 0.25])
+        ax[1].set_ylim([-0.25, 0.25])
         ax[1].set_xlabel('x (m)')
         ax[1].set_ylabel('y (m)')
         draw_angle = data[-1,3]
@@ -73,7 +73,7 @@ class RobotOperator:
                 last_lever_angle = ring_buff[-1,3]
                 self.robot.set_lever_angle(last_lever_angle + np.random.normal(0, 0.01, 1))
 
-                time.sleep(0.5)
+                time.sleep(0.1)
         
         except KeyboardInterrupt:
             print("KeyboardInterrupt")

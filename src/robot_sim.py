@@ -17,8 +17,10 @@ class RobotSimulator(threading.Thread):
         self._ball_r_max = 0.2
         self._lever_angle_max = 1.3
         self._lever_angle_min = -1.3
+        self._friction_accel = 0.001
         self._start_time = 0
         self._current_time = 0
+        self._previous_time = 0
         self._time_step = time_step
         self._report_period = report_period
         self._running = False
@@ -40,11 +42,19 @@ class RobotSimulator(threading.Thread):
     def update_ball_position(self):
         """update ball position to current time using time integration
 
-        To do: replace this with a physics simulation
+        To do: add effect of centrifugal force when lever_angle changes
         """
-        self._ball_r += np.random.normal(0, 0.01, 1)
-        self._ball_r = min([self._ball_r, self._ball_r_max])
-        self._ball_r = max([self._ball_r, -self._ball_r_max])
+        dt = self._current_time - self._previous_time
+        accel = -9.8 * np.sin(self._lever_angle) - self._friction_accel * np.sign(self._ball_r_dot)
+        self._ball_r_dot += accel * dt
+        self._ball_r += self._ball_r_dot * dt
+        if self._ball_r > self._ball_r_max:
+            self._ball_r = self._ball_r_max
+            self._ball_r_dot = -np.abs(self._ball_r_dot)
+        if self._ball_r < -self._ball_r_max:
+            self._ball_r = -self._ball_r_max
+            self._ball_r_dot = np.abs(self._ball_r_dot)
+        self._previous_time = self._current_time
 
         self._ball_position[0] = self._ball_r * np.cos(self._lever_angle)
         self._ball_position[1] = self._ball_r * np.sin(self._lever_angle)
