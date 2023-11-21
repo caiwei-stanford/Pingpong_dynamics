@@ -23,6 +23,9 @@ class RobotOperator:
         ax.plot(data[:,0], data[:,2], 'm-')
         ax.plot(data[:,0], data[:,3], 'b-')
         ax.set_xlabel('time (s)')
+
+        # To do: show animation
+
         plt.draw()
         plt.show(block=block)
         plt.pause(pause_seconds)
@@ -43,6 +46,10 @@ class RobotOperator:
                 self.plot_data(data=ring_buff[-100:,:], fig=fig, ax=ax)
 
                 # To do: put control algorithm here
+
+                # randomly change lever angle
+                last_lever_angle = ring_buff[-1,3]
+                self.robot.set_lever_angle(last_lever_angle + np.random.normal(0, 0.01, 1))
 
                 time.sleep(0.5)
         

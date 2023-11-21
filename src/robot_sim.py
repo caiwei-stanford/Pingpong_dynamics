@@ -26,6 +26,8 @@ class RobotSimulator(threading.Thread):
     
     def set_lever_angle(self, angle):
         self._lever_angle = angle
+        self._lever_angle = min([self._lever_angle, self._lever_angle_max])
+        self._lever_angle = max([self._lever_angle, self._lever_angle_min])
 
     def send_report(self):
         """send data to main thread (time, ball position, lever angle)
@@ -43,10 +45,6 @@ class RobotSimulator(threading.Thread):
         self._ball_r += np.random.normal(0, 0.01, 1)
         self._ball_r = min([self._ball_r, self._ball_r_max])
         self._ball_r = max([self._ball_r, -self._ball_r_max])
-
-        self._lever_angle += np.random.normal(0, 0.01, 1)
-        self._lever_angle = min([self._lever_angle, self._lever_angle_max])
-        self._lever_angle = max([self._lever_angle, self._lever_angle_min])
 
         self._ball_position[0] = self._ball_r * np.cos(self._lever_angle)
         self._ball_position[1] = self._ball_r * np.sin(self._lever_angle)
