@@ -25,9 +25,9 @@ class RobotSimulator(threading.Thread):
         self.data_ex = DataExchange(ring_buff_size)
     
     def set_lever_angle(self, angle):
+        angle = min([angle, self._lever_angle_max])
+        angle = max([angle, self._lever_angle_min])
         self._lever_angle = angle
-        self._lever_angle = min([self._lever_angle, self._lever_angle_max])
-        self._lever_angle = max([self._lever_angle, self._lever_angle_min])
 
     def send_report(self):
         """send data to main thread (time, ball position, lever angle)
