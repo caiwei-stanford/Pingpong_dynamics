@@ -1,30 +1,36 @@
 #!/usr/bin/env python
+import queue
 
 import numpy as np
 import time, threading
 from robot_sim import RobotSimulator
 import matplotlib.pyplot as plt
+import cv2
+
 
 class RobotOperator:
     """RobotOperator class
 
     Use sensor data and algorithm to control the robot
     """
+
     def __init__(self, robot):
         self.robot = robot
         pass
 
     def plot_data(self, data, fig=None, ax=None, block=False, pause_seconds=0.01):
-        if fig==None:
+        if fig == None:
             try:
                 fig = plt.figure(figsize=(12, 6))
-                ax = [fig.add_subplot(1,2,1), fig.add_subplot(1,2,2)]
-            except NameError: print('plt not defined'); return
+                ax = [fig.add_subplot(1, 2, 1), fig.add_subplot(1, 2, 2)]
+            except NameError:
+                print('plt not defined');
+                return
         # plot data history as function of time
         ax[0].clear()
-        ax[0].plot(data[:,0], data[:,1], 'r-')
-        ax[0].plot(data[:,0], data[:,2], 'm-')
-        ax[0].plot(data[:,0], data[:,3], 'b-')
+        ax[0].plot(data[:, 0], data[:, 1], 'r-')
+        ax[0].plot(data[:, 0], data[:, 2], 'm-')
+        ax[0].plot(data[:, 0], data[:, 3], 'b-')
         ax[0].set_xlabel('time (s)')
 
         # show animation of the ball on lever
@@ -37,12 +43,13 @@ class RobotOperator:
         ax[1].set_ylim([-0.25, 0.25])
         ax[1].set_xlabel('x (m)')
         ax[1].set_ylabel('y (m)')
-        draw_angle = data[-1,3]
-        draw_ball_position = np.array([data[-1,1], data[-1,2]])
+        draw_angle = data[-1, 3]
+        draw_ball_position = np.array([data[-1, 1], data[-1, 2]])
         draw_ball_radius = 0.02
         draw_ball = plt.Circle(draw_ball_position, draw_ball_radius, color='r', fill=False)
-        draw_lever = plt.Line2D([-draw_lever_radius*np.cos(draw_angle), draw_lever_radius*np.cos(draw_angle)],
-                                [-draw_lever_radius*np.sin(draw_angle), draw_lever_radius*np.sin(draw_angle)], color='b')
+        draw_lever = plt.Line2D([-draw_lever_radius * np.cos(draw_angle), draw_lever_radius * np.cos(draw_angle)],
+                                [-draw_lever_radius * np.sin(draw_angle), draw_lever_radius * np.sin(draw_angle)],
+                                color='b')
         ax[1].add_artist(draw_ball)
         ax[1].add_artist(draw_lever)
 
@@ -52,9 +59,10 @@ class RobotOperator:
 
     def run(self):
         try:
-             fig = plt.figure(figsize=(12, 6))
-             ax = [fig.add_subplot(1,2,1), fig.add_subplot(1,2,2)]
-        except NameError: print('plt not defined');
+            fig = plt.figure(figsize=(12, 6))
+            ax = [fig.add_subplot(1, 2, 1), fig.add_subplot(1, 2, 2)]
+        except NameError:
+            print('plt not defined');
 
         try:
             self.robot.start()
@@ -62,19 +70,19 @@ class RobotOperator:
                 # obtain data from robot
                 ring_buff, image = self.robot.data_ex.get_data()
                 print("robot running...    [ctrl-c to stop] time = %f ball_position = (%f,%f) lever_angle = %f"
-                       % (ring_buff[-1,0], ring_buff[-1,1], ring_buff[-1,2], ring_buff[-1,3]))
-                
+                      % (ring_buff[-1, 0], ring_buff[-1, 1], ring_buff[-1, 2], ring_buff[-1, 3]))
+
                 # Plot data
-                self.plot_data(data=ring_buff[-100:,:], fig=fig, ax=ax)
+                self.plot_data(data=ring_buff[-100:, :], fig=fig, ax=ax)
 
                 # To do: put control algorithm here
 
                 # randomly change lever angle
-                last_lever_angle = ring_buff[-1,3]
-                self.robot.set_lever_angle(last_lever_angle + np.random.normal(0, 0.01, 1))
+                last_lever_angle = ring_buff[-1, 3]
+                self.robot.set_lever_angle(last_lever_angle + np.random.uniform(-0.05, 0.05))
 
                 time.sleep(0.1)
-        
+
         except KeyboardInterrupt:
             print("KeyboardInterrupt")
             print("Stop robot")
@@ -88,8 +96,27 @@ class RobotOperator:
 def main():
     robot = RobotSimulator(time_step=0.05, report_period=0.2)
     robot_operator = RobotOperator(robot)
+    # robot_operator.frame_queue = queue.Queue()
 
     robot_operator.run()
+    # cv2.namedWindow("Sim")
+    # try:
+    #     while True:
+    #         if not robot_operator.frame_queue.empty():
+    #             frame = robot_operator.frame_queue.get()
+    #             cv2.imshow("Sim", frame)
+    #
+    #         key = cv2.waitKey(1) & 0xFF
+    #         ring_buff, _ = robot_operator.robot.data_ex.get_data()
+    #         last_lever_angle = ring_buff[-1, 3]
+    #         if key == ord("e"):
+    #             robot.set_lever_angle(last_lever_angle - 0.05)
+    #         elif key == ord("r"):
+    #             robot.set_lever_angle(last_lever_angle + 0.05)
+    #
+    # finally:
+    #     cv2.destroyAllWindows()
+
 
 if __name__ == '__main__':
     main()

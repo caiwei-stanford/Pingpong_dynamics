@@ -5,6 +5,7 @@ import numpy as np
 import time, threading
 from data_exch import DataExchange
 
+
 class RobotSimulator(threading.Thread):
     """RobotSimulator class
     """
@@ -25,7 +26,7 @@ class RobotSimulator(threading.Thread):
         self._report_period = report_period
         self._running = False
         self.data_ex = DataExchange(ring_buff_size)
-    
+
     def set_lever_angle(self, angle):
         angle = min([angle, self._lever_angle_max])
         angle = max([angle, self._lever_angle_min])
@@ -36,7 +37,7 @@ class RobotSimulator(threading.Thread):
         """
         data_entry = np.array([self._current_time-self._start_time,
                                self._ball_position[0], self._ball_position[1],
-                               self._lever_angle], dtype=np.float)
+                               self._lever_angle], dtype=float)
         self.data_ex.set_data(data_entry)
 
     def update_ball_position(self):
@@ -70,21 +71,23 @@ class RobotSimulator(threading.Thread):
         self._running = True
         cycle_num = 0
         self._current_time = self._start_time = time.time()
-        self.send_report()
+
         while self._running:
             self._current_time = time.time()
             cycle_num += 1
 
             self.update_ball_position()
+            # send every cycle
+            self.send_report()
 
-            if (cycle_num % int(self._report_period / self._time_step)) == 0:
-                self.send_report()
-
-            remaining_time = self._time_step * cycle_num - (time.time() - self._start_time)
+            # sleep to simulate real-time control loop
+            elapsed = time.time() - self._start_time
+            remaining_time = self._time_step * cycle_num - elapsed
             if remaining_time > 0:
                 time.sleep(remaining_time)
             else:
                 print("Warning: cycle time too short")
+
 
     def stop(self):
         self._running = False
