@@ -1,7 +1,7 @@
-import cv2
+#import cv2
 import numpy as np
 
-from robot_device import RobotDevice
+#from robot_device import RobotDevice
 
 
 class RobotController:
@@ -21,6 +21,7 @@ class RobotController:
 
 
 def detect_ball(frame):
+    import cv2
     lower_orange = np.array([10, 80, 230])
     upper_orange = np.array([40, 255, 255])
     center_x, center_y = None, None
@@ -39,7 +40,8 @@ def detect_ball(frame):
     return center_x, center_y, contours
 
 
-def main():
+def run():
+    import cv2
     robot_device = RobotDevice()
     robot_device.start()
     controller = RobotController(robot_device)
@@ -82,4 +84,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    run()

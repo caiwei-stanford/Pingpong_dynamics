@@ -1,16 +1,24 @@
 """RobotSimulator class
 """
+import sys
+sys.path.append("..")
+from robot_base import RobotBase
 
 import numpy as np
-import time, threading
+import time
+import threading
+import queue
 from data_exch import DataExchange
 
 
-class RobotSimulator(threading.Thread):
+class RobotSimulator(RobotBase, threading.Thread):
     """RobotSimulator class
     """
     def __init__(self, time_step=0.01, report_period=0.2, ring_buff_size=10000):
         threading.Thread.__init__(self)
+
+        self.command_queue = queue.Queue()
+
         self._lever_angle = 0                       # in radians
         self._ball_position = np.array([0.0, 0.0])  # in meters
         self._ball_r = 0.0        # internal DOF: ball position along the lever
@@ -27,12 +35,22 @@ class RobotSimulator(threading.Thread):
         self._running = False
         self.data_ex = DataExchange(ring_buff_size)
 
+    def exec_cmd():
+        # Get cmd from buffer
+        # call set_lever_angle(angle)
+        if not self.command_queue.empty():
+            command, value = self.command_queue.get()
+            if command == "set_lever_angle":
+                self.set_lever_angle(value)
+            else:
+                print(f"unrecognized command {command}")
+
     def set_lever_angle(self, angle):
         angle = min([angle, self._lever_angle_max])
         angle = max([angle, self._lever_angle_min])
         self._lever_angle = angle
 
-    def send_report(self):
+    def send_data(self):
         """send data to main thread (time, ball position, lever angle)
         """
         data_entry = np.array([self._current_time-self._start_time,
@@ -76,9 +94,12 @@ class RobotSimulator(threading.Thread):
             self._current_time = time.time()
             cycle_num += 1
 
+            # doing the simulation
             self.update_ball_position()
+
+            self.exec_cmd()
             # send every cycle
-            self.send_report()
+            self.send_data()
 
             # sleep to simulate real-time control loop
             elapsed = time.time() - self._start_time
