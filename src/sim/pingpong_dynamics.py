@@ -62,7 +62,7 @@ class RobotOperator:
             fig = plt.figure(figsize=(12, 6))
             ax = [fig.add_subplot(1, 2, 1), fig.add_subplot(1, 2, 2)]
         except NameError:
-            print('plt not defined');
+            print('plt not defined')
 
         try:
             self.robot.start()
@@ -96,26 +96,8 @@ class RobotOperator:
 def main():
     robot = RobotSimulator(time_step=0.05, report_period=0.2)
     robot_operator = RobotOperator(robot)
-    # robot_operator.frame_queue = queue.Queue()
 
     robot_operator.run()
-    # cv2.namedWindow("Sim")
-    # try:
-    #     while True:
-    #         if not robot_operator.frame_queue.empty():
-    #             frame = robot_operator.frame_queue.get()
-    #             cv2.imshow("Sim", frame)
-    #
-    #         key = cv2.waitKey(1) & 0xFF
-    #         ring_buff, _ = robot_operator.robot.data_ex.get_data()
-    #         last_lever_angle = ring_buff[-1, 3]
-    #         if key == ord("e"):
-    #             robot.set_lever_angle(last_lever_angle - 0.05)
-    #         elif key == ord("r"):
-    #             robot.set_lever_angle(last_lever_angle + 0.05)
-    #
-    # finally:
-    #     cv2.destroyAllWindows()
 
 
 if __name__ == '__main__':

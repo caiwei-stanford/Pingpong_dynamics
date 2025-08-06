@@ -4,10 +4,12 @@ import queue
 
 import numpy as np
 from dynamixel_sdk import *
+from robot_base import RobotBase
+from data_exch import DataExchange
 
 
-class RobotDevice(threading.Thread):
-    def __init__(self, device_name='/dev/cu.usbserial-FT7W9245', dxl_id=1, baudrate=57600, video_idx=0):
+class RobotDevice(RobotBase, threading.Thread):
+    def __init__(self, device_name='/dev/tty.usbserial-FT7W9245', dxl_id=1, baudrate=57600, video_idx=0):
         super().__init__()
         self.command_queue = queue.Queue()
         self.frame_queue = queue.Queue(maxsize=1)
@@ -33,9 +35,13 @@ class RobotDevice(threading.Thread):
 
         # Camera setup
         self.cap = cv2.VideoCapture(video_idx)
-        self.set_camera()
+        self._init_camera()
 
+        # Check motor
         self._init_motor()
+
+        # Setup data exchange
+        self.data_ex = DataExchange(ring_buff_size=10000)
 
     def _init_motor(self):
         if not self.port_handler.openPort():
@@ -47,7 +53,8 @@ class RobotDevice(threading.Thread):
         if dxl_comm_result != COMM_SUCCESS or dxl_error != 0:
             raise RuntimeError("Failed to enable torque")
 
-    def set_camera(self):
+
+    def _init_camera(self):
         self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
         self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
         self.cap.set(cv2.CAP_PROP_FPS, 60)
@@ -90,6 +97,25 @@ class RobotDevice(threading.Thread):
         ret, frame = self.cap.read()
         return frame if ret else None
 
+    def exec_cmd(self):
+        if not self.command_queue.empty():
+            command, value = self.command_queue.get()
+            if command == "set_lever_angle":
+                self.set_lever_angle(value)
+            elif command == "left":
+                self.move_motor_left()
+            elif command == "right":
+                self.move_motor_right()
+            else:
+                print(f"unrecognized command {command}")
+
+    def send_data(self):
+        """send data to main thread (ball position, ball velocity, lever angle)
+        """
+        # ToDo: get ball position center
+        data_entry = np.array([0, 0, self.get_velocity(), self.get_lever_angle()], dtype=float)
+        self.data_ex.set_data(data_entry)
+
     def run(self):
         while self.running:
             # Capture frame
@@ -102,18 +128,13 @@ class RobotDevice(threading.Thread):
             self.ringbuff(angle)
 
             # Handle commands
-            if not self.command_queue.empty():
-                command, value = self.command_queue.get()
-                if command == "set_lever_angle":
-                    self.set_lever_angle(value)
-                elif command == "left":
-                    self.move_motor_left()
-                elif command == "right":
-                    self.move_motor_right()
+            self.exec_cmd()
 
-        self.shutdown()
+            # Send data every cycle
+            self.send_data()
 
-    def shutdown(self):
+    def stop(self):
+        self.running = False
         self.packet_handler.write1ByteTxRx(
             self.port_handler, self.dxl_id, self.torque_enable_addr, self.torque_disable)
         self.cap.release()

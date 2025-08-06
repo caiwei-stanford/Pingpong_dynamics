@@ -1,28 +1,30 @@
 """RobotSimulator class
 """
 import sys
+
 sys.path.append("..")
-from robot_base import RobotBase
+from src.robot_base import RobotBase
 
 import numpy as np
 import time
 import threading
 import queue
-from data_exch import DataExchange
+from src.data_exch import DataExchange
 
 
 class RobotSimulator(RobotBase, threading.Thread):
     """RobotSimulator class
     """
-    def __init__(self, time_step=0.01, report_period=0.2, ring_buff_size=10000):
+
+    def __init__(self, time_step=0.01, report_period=0.2):
         threading.Thread.__init__(self)
 
         self.command_queue = queue.Queue()
 
-        self._lever_angle = 0                       # in radians
+        self._lever_angle = 0  # in radians
         self._ball_position = np.array([0.0, 0.0])  # in meters
-        self._ball_r = 0.0        # internal DOF: ball position along the lever
-        self._ball_r_dot = 0.0    # internal DOF: ball velocity along the lever
+        self._ball_r = 0.0  # internal DOF: ball position along the lever
+        self._ball_r_dot = 0.0  # internal DOF: ball velocity along the lever
         self._ball_r_max = 0.2
         self._lever_angle_max = 1.3
         self._lever_angle_min = -1.3
@@ -33,9 +35,9 @@ class RobotSimulator(RobotBase, threading.Thread):
         self._time_step = time_step
         self._report_period = report_period
         self._running = False
-        self.data_ex = DataExchange(ring_buff_size)
+        self.data_ex = DataExchange(ring_buff_size=10000)
 
-    def exec_cmd():
+    def exec_cmd(self):
         # Get cmd from buffer
         # call set_lever_angle(angle)
         if not self.command_queue.empty():
@@ -53,7 +55,7 @@ class RobotSimulator(RobotBase, threading.Thread):
     def send_data(self):
         """send data to main thread (time, ball position, lever angle)
         """
-        data_entry = np.array([self._current_time-self._start_time,
+        data_entry = np.array([self._current_time - self._start_time,
                                self._ball_position[0], self._ball_position[1],
                                self._lever_angle], dtype=float)
         self.data_ex.set_data(data_entry)
@@ -108,7 +110,6 @@ class RobotSimulator(RobotBase, threading.Thread):
                 time.sleep(remaining_time)
             else:
                 print("Warning: cycle time too short")
-
 
     def stop(self):
         self._running = False
