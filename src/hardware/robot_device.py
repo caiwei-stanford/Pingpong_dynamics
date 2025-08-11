@@ -116,6 +116,7 @@ class RobotDevice(RobotBase, threading.Thread):
         data_entry = np.array([0, 0, self.get_velocity(), self.get_lever_angle()], dtype=float)
         self.data_ex.set_data(data_entry)
 
+    # ToDo: implement async for updating, command, data
     def run(self):
         while self.running:
             # Capture frame

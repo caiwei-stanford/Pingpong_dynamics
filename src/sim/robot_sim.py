@@ -17,7 +17,7 @@ class RobotSimulator(RobotBase, threading.Thread):
     """
 
     def __init__(self, time_step=0.01, report_period=0.2):
-        threading.Thread.__init__(self)
+        super().__init__()
 
         self.command_queue = queue.Queue()
 
@@ -44,6 +44,10 @@ class RobotSimulator(RobotBase, threading.Thread):
             command, value = self.command_queue.get()
             if command == "set_lever_angle":
                 self.set_lever_angle(value)
+            elif command == "right":
+                self.set_lever_angle(self._lever_angle + 0.1)
+            elif command == "left":
+                self.set_lever_angle(self._lever_angle - 0.1)
             else:
                 print(f"unrecognized command {command}")
 

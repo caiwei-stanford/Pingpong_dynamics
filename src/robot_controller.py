@@ -1,7 +1,8 @@
-#import cv2
-import numpy as np
+import cv2
+import time
 
-from hardware.robot_device import RobotDevice
+import numpy as np
+import matplotlib.pyplot as plt
 
 
 class RobotController:
@@ -10,6 +11,7 @@ class RobotController:
         self.Kp = 0.00025
         self.Kd = 0.0006
         self.balance_enabled = False
+        self.running = False
 
     def control_step(self, error):
         pos_term = error * self.Kp
@@ -23,10 +25,8 @@ class RobotController:
     def send_cmd(self, command, value):
         self.device.command_queue.put((command, value))
 
-
     @staticmethod
     def detect_ball(self, frame):
-        import cv2
         lower_orange = np.array([10, 80, 230])
         upper_orange = np.array([40, 255, 255])
         center_x, center_y = None, None
@@ -44,12 +44,86 @@ class RobotController:
 
         return center_x, center_y, contours
 
-    def run(self):
-        import cv2
-        self.device.start()
+    @staticmethod
+    def plot_data(self, data, fig=None, ax=None, block=False, pause_seconds=0.01):
+        if fig is None:
+            try:
+                fig = plt.figure(figsize=(12, 6))
+                ax = [fig.add_subplot(1, 2, 1), fig.add_subplot(1, 2, 2)]
+            except NameError:
+                print('plt not defined')
+                return
+        # plot data history as function of time
+        ax[0].clear()
+        ax[0].plot(data[:, 0], data[:, 1], 'r-')
+        ax[0].plot(data[:, 0], data[:, 2], 'm-')
+        ax[0].plot(data[:, 0], data[:, 3], 'b-')
+        ax[0].set_xlabel('time (s)')
+
+        # show animation of the ball on lever
+        ax[1].clear()
+        draw_lever_radius = 0.22
+        background_circle = plt.Circle((0, 0), draw_lever_radius, color='k', fill=False)
+        ax[1].add_artist(background_circle)
+        ax[1].set_aspect('equal')
+        ax[1].set_xlim([-0.25, 0.25])
+        ax[1].set_ylim([-0.25, 0.25])
+        ax[1].set_xlabel('x (m)')
+        ax[1].set_ylabel('y (m)')
+        draw_angle = data[-1, 3]
+        draw_ball_position = np.array([data[-1, 1], data[-1, 2]])
+        draw_ball_radius = 0.02
+        draw_ball = plt.Circle(draw_ball_position, draw_ball_radius, color='r', fill=False)
+        draw_lever = plt.Line2D([-draw_lever_radius * np.cos(draw_angle), draw_lever_radius * np.cos(draw_angle)],
+                                [-draw_lever_radius * np.sin(draw_angle), draw_lever_radius * np.sin(draw_angle)],
+                                color='b')
+        ax[1].add_artist(draw_ball)
+        ax[1].add_artist(draw_lever)
+
+        plt.draw()
+        plt.show(block=block)
+        plt.pause(pause_seconds)
+
+    def run_sim(self):
+        try:
+            fig = plt.figure(figsize=(12, 6))
+            ax = [fig.add_subplot(1, 2, 1), fig.add_subplot(1, 2, 2)]
+        except NameError:
+            print('plt not defined')
 
         try:
+            self.device.start()
+
+            cv2.namedWindow("hidden", cv2.WINDOW_NORMAL)
+            cv2.moveWindow("hidden", -1000, -1000)  # Move it off-screen
             while True:
+                # obtain data from robot
+                ring_buff, image = self.device.data_ex.get_data()
+                print("robot running...    [ctrl-c to stop] time = %f ball_position = (%f,%f) lever_angle = %f"
+                      % (ring_buff[-1, 0], ring_buff[-1, 1], ring_buff[-1, 2], ring_buff[-1, 3]))
+
+                # Plot data
+                self.plot_data(self, data=ring_buff[-100:, :], fig=fig, ax=ax)
+
+                # To do: put control algorithm here
+                key = cv2.waitKey(1) & 0xFF
+                self.key_pressed(key)
+        except KeyboardInterrupt:
+            print("Stop robot")
+            self.device.stop()
+            cv2.destroyAllWindows()
+
+    def run_device(self):
+        self.device.start()
+        self.running = True
+        try:
+            while self.running:
+                # ToDo: check how many frames are in queue
+                # ToDo: find out what is causing the lag:
+                #  1. Sending frame over and opencv in controller.
+                #  2. sending and parsing command
+                #  try to increase queue size
+                # ToDo: put time stamp on every frame and every command
                 if not self.device.frame_queue.empty():
                     frame = self.device.frame_queue.get()
                     center_x, center_y, contours = self.detect_ball(self, frame)
@@ -70,16 +144,19 @@ class RobotController:
                     cv2.imshow("Ball Balancer", frame)
 
                 key = cv2.waitKey(1) & 0xFF
-                if key == ord('q'):
-                    break
-                elif key == ord('e'):
-                    self.send_cmd("right", None)
-                elif key == ord('r'):
-                    self.send_cmd("left", None)
-                elif key == ord('w'):
-                    self.balance_enabled = not self.balance_enabled
+                self.key_pressed(key)
 
         finally:
             self.device.stop()
             self.device.join()
             cv2.destroyAllWindows()
+
+    def key_pressed(self, key):
+        if key == ord('q'):
+            self.running = False
+        elif key == ord('e'):
+            self.send_cmd("right", None)
+        elif key == ord('r'):
+            self.send_cmd("left", None)
+        elif key == ord('w'):
+            self.balance_enabled = not self.balance_enabled
