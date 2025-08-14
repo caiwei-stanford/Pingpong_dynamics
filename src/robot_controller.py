@@ -1,3 +1,5 @@
+import queue
+
 import cv2
 import time
 
@@ -20,10 +22,10 @@ class RobotController:
         val = np.clip(val, -1, 1)
         theta = 90 - np.degrees(np.arccos(val))
         new_lever_angle = 1550 + (theta / 360) * 4000
-        self.send_cmd("set_lever_angle", new_lever_angle)
+        self.send_cmd("set_lever_angle", int(new_lever_angle), time.time())
 
-    def send_cmd(self, command, value):
-        self.device.command_queue.put((command, value))
+    def send_cmd(self, command, value, cmd_time):
+        self.device.command_queue.put((command, value, cmd_time))
 
     @staticmethod
     def detect_ball(self, frame):
@@ -124,39 +126,40 @@ class RobotController:
                 #  2. sending and parsing command
                 #  try to increase queue size
                 # ToDo: put time stamp on every frame and every command
-                if not self.device.frame_queue.empty():
-                    frame = self.device.frame_queue.get()
-                    center_x, center_y, contours = self.detect_ball(self, frame)
 
-                    if contours:
-                        cv2.drawContours(frame, contours, -1, (0, 255, 0), 3)
-                    if center_x and center_y:
-                        cv2.circle(frame, (center_x, center_y), 8, (255, 0, 0), -1)
+                frame, frame_time = self.device.frame_queue.get(block=True)
+                center_x, center_y, contours = self.detect_ball(self, frame)
+                self.device.update_position(center_x)
 
-                    frame_center = frame.shape[1] // 2
-                    if self.balance_enabled and center_x is not None:
-                        error = center_x - frame_center
+                if contours:
+                    cv2.drawContours(frame, contours, -1, (0, 255, 0), 3)
+                if center_x and center_y:
+                    cv2.circle(frame, (center_x, center_y), 8, (255, 0, 0), -1)
+                if self.balance_enabled and center_x is not None:
+                    error = center_x - (frame.shape[1] // 2)
 
-                        # Control with dead zone of 10 pixels
-                        if abs(error) > 10:
-                            self.control_step(error)
+                    # Control with dead zone of 10 pixels
+                    if abs(error) < 10 and self.device.get_velocity() == 0:
+                        self.balance_enabled = False
 
-                    cv2.imshow("Ball Balancer", frame)
+                    self.control_step(error)
+
+                cv2.imshow("Ball Balancer", frame)
 
                 key = cv2.waitKey(1) & 0xFF
                 self.key_pressed(key)
 
         finally:
             self.device.stop()
-            self.device.join()
             cv2.destroyAllWindows()
 
     def key_pressed(self, key):
         if key == ord('q'):
+            self.balance_enabled = False
             self.running = False
         elif key == ord('e'):
-            self.send_cmd("right", None)
+            self.send_cmd("right", None, time.time())
         elif key == ord('r'):
-            self.send_cmd("left", None)
+            self.send_cmd("left", None, time.time())
         elif key == ord('w'):
             self.balance_enabled = not self.balance_enabled

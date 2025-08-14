@@ -11,4 +11,4 @@ from hardware.robot_device import RobotDevice
 robot_device = RobotDevice()
 controller = RobotController(robot_device)
 
-controller.run()
+controller.run_device()

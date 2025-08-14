@@ -38,8 +38,6 @@ class RobotSimulator(RobotBase, threading.Thread):
         self.data_ex = DataExchange(ring_buff_size=10000)
 
     def exec_cmd(self):
-        # Get cmd from buffer
-        # call set_lever_angle(angle)
         if not self.command_queue.empty():
             command, value = self.command_queue.get()
             if command == "set_lever_angle":

@@ -1,3 +1,5 @@
+import time
+
 import cv2
 import threading
 import queue
@@ -11,7 +13,7 @@ from data_exch import DataExchange
 class RobotDevice(RobotBase, threading.Thread):
     def __init__(self, device_name='/dev/tty.usbserial-FT7W9245', dxl_id=1, baudrate=57600, video_idx=0):
         super().__init__()
-        self.command_queue = queue.Queue()
+        self.command_queue = queue.Queue(maxsize=1)
         self.frame_queue = queue.Queue(maxsize=1)
         self.running = True
         self.inc = 20
@@ -53,7 +55,6 @@ class RobotDevice(RobotBase, threading.Thread):
         if dxl_comm_result != COMM_SUCCESS or dxl_error != 0:
             raise RuntimeError("Failed to enable torque")
 
-
     def _init_camera(self):
         self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
         self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
@@ -72,9 +73,8 @@ class RobotDevice(RobotBase, threading.Thread):
             return self.position_array[-1]
         return pos
 
-    def ringbuff(self, new_value):
+    def update_position(self, new_value):
         self.position_array = np.append(self.position_array, new_value)[1:]
-        return self.position_array
 
     def get_velocity(self):
         return (self.position_array[3] - self.position_array[0]) / 4
@@ -95,11 +95,12 @@ class RobotDevice(RobotBase, threading.Thread):
 
     def read_frame(self):
         ret, frame = self.cap.read()
-        return frame if ret else None
+        return frame, time.time() if ret else None
 
     def exec_cmd(self):
-        if not self.command_queue.empty():
-            command, value = self.command_queue.get()
+        try:
+            command, value, cmd_time = self.command_queue.get_nowait()
+            # print(time.time()-cmd_time)
             if command == "set_lever_angle":
                 self.set_lever_angle(value)
             elif command == "left":
@@ -108,25 +109,19 @@ class RobotDevice(RobotBase, threading.Thread):
                 self.move_motor_right()
             else:
                 print(f"unrecognized command {command}")
+        except queue.Empty:
+            pass
 
     def send_data(self):
-        """send data to main thread (ball position, ball velocity, lever angle)
-        """
-        # ToDo: get ball position center
-        data_entry = np.array([0, 0, self.get_velocity(), self.get_lever_angle()], dtype=float)
-        self.data_ex.set_data(data_entry)
+        pass
 
     # ToDo: implement async for updating, command, data
     def run(self):
         while self.running:
             # Capture frame
-            frame = self.read_frame()
+            frame, frame_time = self.read_frame()
             if frame is not None and not self.frame_queue.full():
-                self.frame_queue.put(frame)
-
-            # Update position buffer for velocity tracking
-            angle = self.get_lever_angle()
-            self.ringbuff(angle)
+                self.frame_queue.put((frame, frame_time))
 
             # Handle commands
             self.exec_cmd()
