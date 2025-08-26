@@ -39,7 +39,7 @@ class RobotSimulator(RobotBase, threading.Thread):
 
     def exec_cmd(self):
         if not self.command_queue.empty():
-            command, value = self.command_queue.get()
+            command, value, cmd_time = self.command_queue.get()
             if command == "set_lever_angle":
                 self.set_lever_angle(value)
             elif command == "right":
@@ -53,6 +53,12 @@ class RobotSimulator(RobotBase, threading.Thread):
         angle = min([angle, self._lever_angle_max])
         angle = max([angle, self._lever_angle_min])
         self._lever_angle = angle
+
+    def get_velocity(self):
+        return self._ball_r_dot
+
+    def get_r_position(self):
+        return self._ball_r
 
     def send_data(self):
         """send data to main thread (time, ball position, lever angle)
@@ -81,7 +87,6 @@ class RobotSimulator(RobotBase, threading.Thread):
 
         self._ball_position[0] = self._ball_r * np.cos(self._lever_angle)
         self._ball_position[1] = self._ball_r * np.sin(self._lever_angle)
-        time.sleep(0.0012)
 
     def run(self):
         """Simulate the physics of the robot, run on a separate thread

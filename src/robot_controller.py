@@ -1,3 +1,4 @@
+import math
 import queue
 
 import cv2
@@ -101,13 +102,21 @@ class RobotController:
             while True:
                 # obtain data from robot
                 ring_buff, image = self.device.data_ex.get_data()
-                print("robot running...    [ctrl-c to stop] time = %f ball_position = (%f,%f) lever_angle = %f"
-                      % (ring_buff[-1, 0], ring_buff[-1, 1], ring_buff[-1, 2], ring_buff[-1, 3]))
+                # print("robot running...    [ctrl-c to stop] time = %f ball_position = (%f,%f) lever_angle = %f"
+                #       % (ring_buff[-1, 0], ring_buff[-1, 1], ring_buff[-1, 2], ring_buff[-1, 3]))
 
                 # Plot data
                 self.plot_data(self, data=ring_buff[-100:, :], fig=fig, ax=ax)
 
-                # To do: put control algorithm here
+                if self.balance_enabled:
+                    dist = self.device.get_r_position()
+                    if abs(dist) == 0 and abs(self.device.get_velocity()) < 1:
+                        self.balance_enabled = False
+                        print("balance success")
+                        continue
+                    self.control_step(dist)
+
+                # ToDo: put control algorithm here
                 key = cv2.waitKey(1) & 0xFF
                 self.key_pressed(key)
         except KeyboardInterrupt:
@@ -118,15 +127,9 @@ class RobotController:
     def run_device(self):
         self.device.start()
         self.running = True
+        start_time = time.time()
         try:
             while self.running:
-                # ToDo: check how many frames are in queue
-                # ToDo: find out what is causing the lag:
-                #  1. Sending frame over and opencv in controller.
-                #  2. sending and parsing command
-                #  try to increase queue size
-                # ToDo: put time stamp on every frame and every command
-
                 frame, frame_time = self.device.frame_queue.get(block=True)
                 center_x, center_y, contours = self.detect_ball(self, frame)
                 self.device.update_position(center_x)
@@ -135,12 +138,18 @@ class RobotController:
                     cv2.drawContours(frame, contours, -1, (0, 255, 0), 3)
                 if center_x and center_y:
                     cv2.circle(frame, (center_x, center_y), 8, (255, 0, 0), -1)
+
+                print("robot running...    time = %f ball_position = (%f,%f) velocity = %f"
+                      % (time.time() - start_time, center_x, center_y, self.device.get_velocity()))
+
                 if self.balance_enabled and center_x is not None:
-                    error = center_x - (frame.shape[1] // 2)
+                    error = math.sqrt(center_x ** 2 + center_y ** 2) - (frame.shape[1] // 2)
 
                     # Control with dead zone of 10 pixels
-                    if abs(error) < 10 and self.device.get_velocity() == 0:
+                    if abs(error) < 10 and abs(self.device.get_velocity()) < 1:
                         self.balance_enabled = False
+                        print("balance success")
+                        continue
 
                     self.control_step(error)
 

@@ -52,8 +52,15 @@ class RobotDevice(RobotBase, threading.Thread):
             raise RuntimeError("Failed to set baudrate")
         dxl_comm_result, dxl_error = self.packet_handler.write1ByteTxRx(
             self.port_handler, self.dxl_id, self.torque_enable_addr, self.torque_enable)
-        if dxl_comm_result != COMM_SUCCESS or dxl_error != 0:
-            raise RuntimeError("Failed to enable torque")
+        # if dxl_comm_result != COMM_SUCCESS or dxl_error != 0:
+        #     raise RuntimeError("Failed to enable torque")
+        if dxl_comm_result != COMM_SUCCESS:
+            raise RuntimeError(f"Torque enable failed: COMM error {dxl_comm_result} "
+                               f"({self.packet_handler.getTxRxResult(dxl_comm_result)})")
+
+        if dxl_error != 0:
+            raise RuntimeError(f"Torque enable failed: Motor error {dxl_error} "
+                               f"({self.packet_handler.getRxPacketError(dxl_error)})")
 
     def _init_camera(self):
         self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
@@ -74,9 +81,10 @@ class RobotDevice(RobotBase, threading.Thread):
         return pos
 
     def update_position(self, new_value):
-        self.position_array = np.append(self.position_array, new_value)[1:]
+        self.position_array = np.append(self.position_array, new_value)
+        self.position_array = np.delete(self.position_array, 0)
 
-    def get_velocity(self):
+    def get_velocity(self, dt=0.01):
         return (self.position_array[3] - self.position_array[0]) / 4
 
     def move_motor_left(self):
@@ -127,7 +135,7 @@ class RobotDevice(RobotBase, threading.Thread):
             self.exec_cmd()
 
             # Send data every cycle
-            self.send_data()
+            # self.send_data()
 
     def stop(self):
         self.running = False

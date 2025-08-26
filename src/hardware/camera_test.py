@@ -5,14 +5,14 @@ import numpy as np
 cap = cv2.VideoCapture(0)
 
 
-# cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
-# cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
-# cap.set(cv2.CAP_PROP_FPS, 60)
-# cap.set(cv2.CAP_PROP_FOURCC,cv2.VideoWriter_fourcc('M','J','P','G'))
-# # set the focus to infinity
-# cap.set(cv2.CAP_PROP_FOCUS, 0)
-# # make sure auto exposure and auto white balance are turned off
-# cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, 0.25)
+cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
+cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+cap.set(cv2.CAP_PROP_FPS, 60)
+cap.set(cv2.CAP_PROP_FOURCC,cv2.VideoWriter_fourcc('M','J','P','G'))
+# set the focus to infinity
+cap.set(cv2.CAP_PROP_FOCUS, 0)
+# make sure auto exposure and auto white balance are turned off
+cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, 0.25)
 
 
 
