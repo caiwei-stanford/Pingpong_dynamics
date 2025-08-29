@@ -1,9 +1,6 @@
 import math
-import queue
-
 import cv2
 import time
-
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -21,8 +18,10 @@ class RobotController:
         vel_term = self.device.get_velocity() * self.Kd
         val = pos_term + vel_term
         val = np.clip(val, -1, 1)
-        theta = 90 - np.degrees(np.arccos(val))
-        new_lever_angle = 1550 + (theta / 360) * 4000
+        theta = np.pi - np.arccos(val)
+        # theta = 90 - np.degrees(np.arccos(val))
+        # new_lever_angle = 1550 + (theta / 360) * 4000
+        new_lever_angle = theta
         self.send_cmd("set_lever_angle", int(new_lever_angle), time.time())
 
     def send_cmd(self, command, value, cmd_time):
@@ -102,8 +101,8 @@ class RobotController:
             while True:
                 # obtain data from robot
                 ring_buff, image = self.device.data_ex.get_data()
-                # print("robot running...    [ctrl-c to stop] time = %f ball_position = (%f,%f) lever_angle = %f"
-                #       % (ring_buff[-1, 0], ring_buff[-1, 1], ring_buff[-1, 2], ring_buff[-1, 3]))
+                print("robot running...    [ctrl-c to stop] time = %f ball_position = (%f,%f) lever_angle = %f"
+                      % (ring_buff[-1, 0], ring_buff[-1, 1], ring_buff[-1, 2], ring_buff[-1, 3]))
 
                 # Plot data
                 self.plot_data(self, data=ring_buff[-100:, :], fig=fig, ax=ax)
@@ -123,6 +122,7 @@ class RobotController:
             print("Stop robot")
             self.device.stop()
             cv2.destroyAllWindows()
+            self.device.join()
 
     def run_device(self):
         self.device.start()
