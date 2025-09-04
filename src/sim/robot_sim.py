@@ -49,6 +49,11 @@ class RobotSimulator(RobotBase, threading.Thread):
             else:
                 print(f"unrecognized command {command}")
 
+    async def exec_cmd_loop(self):
+        while self._running:
+            self.exec_cmd()
+            await asyncio.sleep(self._time_step)
+
     def set_lever_angle(self, angle):
         angle = min([angle, self._lever_angle_max])
         angle = max([angle, self._lever_angle_min])
@@ -68,7 +73,12 @@ class RobotSimulator(RobotBase, threading.Thread):
                                self._lever_angle], dtype=float)
         self.data_ex.set_data(data_entry)
 
-    async def update_ball_position(self):
+    async def send_data_loop(self):
+        while self._running:
+            self.send_data()
+            await asyncio.sleep(self._time_step)
+
+    def update_ball_position(self):
         """update ball position to current time using time integration
 
         To do: add effect of centrifugal force when lever_angle changes
@@ -87,53 +97,38 @@ class RobotSimulator(RobotBase, threading.Thread):
 
         self._ball_position[0] = self._ball_r * np.cos(self._lever_angle)
         self._ball_position[1] = self._ball_r * np.sin(self._lever_angle)
-        await asyncio.sleep(self._time_step)
-        time.sleep(0.0012)
+        # time.sleep(0.0012)
 
-    async def loop(self):
-        """Simulate the physics of the robot, run on a separate thread
-        Periodically send ball position to main thread
-        Update lever_angle from main thread
-        """
-        cycle_num = 0
+    async def update_ball_position_loop(self):
+        while self._running:
+            self.update_ball_position()
+            await asyncio.sleep(self._time_step)
+
+    async def main_loop(self):
         self._current_time = self._start_time = time.time()
         self._previous_time = self._start_time
 
-        self._bg_task = asyncio.create_task(self.update_ball_position())
+        tasks = [
+            asyncio.create_task(self.update_ball_position_loop()),
+            asyncio.create_task(self.exec_cmd_loop()),
+            asyncio.create_task(self.send_data_loop())
+        ]
+
         try:
             while self._running:
                 self._current_time = time.time()
-                cycle_num += 1
-
-                await self.update_ball_position()
-
-                self.exec_cmd()
-                # send every cycle
-                self.send_data()
-
-                # sleep to simulate real-time control loop
-                elapsed = time.time() - self._start_time
-                remaining_time = self._time_step * cycle_num - elapsed
-                if remaining_time > 0:
-                    await asyncio.sleep(remaining_time)
-                else:
-                    # ToDo: Check cycle time
-                    print("Warning: cycle time too short")
+                await asyncio.sleep(self._time_step)  # main clock tick
         finally:
-            # cleanup background task
-            if self._bg_task:
-                self._bg_task.cancel()
-                try:
-                    await self._bg_task
-                except asyncio.CancelledError:
-                    pass
+            for t in tasks:
+                t.cancel()
+            await asyncio.gather(*tasks, return_exceptions=True)
 
     def run(self):
         print("robot thread started")
         self._running = True
         asyncio.set_event_loop(self._loop)
         try:
-            self._loop.run_until_complete(self.loop())
+            self._loop.run_until_complete(self.main_loop())
         finally:
             self._loop.close()
 

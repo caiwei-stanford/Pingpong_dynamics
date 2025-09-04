@@ -18,10 +18,8 @@ class RobotController:
         vel_term = self.device.get_velocity() * self.Kd
         val = pos_term + vel_term
         val = np.clip(val, -1, 1)
-        theta = np.pi - np.arccos(val)
-        # theta = 90 - np.degrees(np.arccos(val))
-        # new_lever_angle = 1550 + (theta / 360) * 4000
-        new_lever_angle = theta
+        theta = 90 - np.degrees(np.arccos(val))
+        new_lever_angle = 1550 + (theta / 360) * 4000
         self.send_cmd("set_lever_angle", int(new_lever_angle), time.time())
 
     def send_cmd(self, command, value, cmd_time):
