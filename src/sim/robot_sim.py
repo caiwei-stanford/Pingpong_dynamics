@@ -59,12 +59,6 @@ class RobotSimulator(RobotBase, threading.Thread):
         angle = max([angle, self._lever_angle_min])
         self._lever_angle = angle
 
-    def get_velocity(self):
-        return self._ball_r_dot
-
-    def get_r_position(self):
-        return self._ball_r
-
     def send_data(self):
         """send data to main thread (time, ball position, lever angle)
         """
@@ -78,7 +72,7 @@ class RobotSimulator(RobotBase, threading.Thread):
             self.send_data()
             await asyncio.sleep(self._time_step)
 
-    def update_ball_position(self):
+    def update_ball_state(self):
         """update ball position to current time using time integration
 
         To do: add effect of centrifugal force when lever_angle changes
@@ -99,9 +93,9 @@ class RobotSimulator(RobotBase, threading.Thread):
         self._ball_position[1] = self._ball_r * np.sin(self._lever_angle)
         # time.sleep(0.0012)
 
-    async def update_ball_position_loop(self):
+    async def update_ball_state_loop(self):
         while self._running:
-            self.update_ball_position()
+            self.update_ball_state()
             await asyncio.sleep(self._time_step)
 
     async def main_loop(self):
@@ -109,7 +103,7 @@ class RobotSimulator(RobotBase, threading.Thread):
         self._previous_time = self._start_time
 
         tasks = [
-            asyncio.create_task(self.update_ball_position_loop()),
+            asyncio.create_task(self.update_ball_state_loop()),
             asyncio.create_task(self.exec_cmd_loop()),
             asyncio.create_task(self.send_data_loop())
         ]

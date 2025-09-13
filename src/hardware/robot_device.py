@@ -18,9 +18,6 @@ class RobotDevice(RobotBase, threading.Thread):
         self.running = True
         self.inc = 20
 
-        # Position buffer for velocity estimation
-        self.position_array = np.zeros(4)
-
         # Dynamixel setup
         self.dxl_id = dxl_id
         self.port_handler = PortHandler(device_name)
@@ -75,17 +72,7 @@ class RobotDevice(RobotBase, threading.Thread):
     def get_lever_angle(self):
         pos, dxl_comm_result, dxl_error = self.packet_handler.read4ByteTxRx(
             self.port_handler, self.dxl_id, self.present_position_addr)
-        if dxl_comm_result != COMM_SUCCESS or dxl_error != 0:
-            # handle errors if necessary, for now just return last known
-            return self.position_array[-1]
         return pos
-
-    def update_position(self, new_value):
-        self.position_array = np.append(self.position_array, new_value)
-        self.position_array = np.delete(self.position_array, 0)
-
-    def get_velocity(self, dt=0.01):
-        return (self.position_array[3] - self.position_array[0]) / 4
 
     def move_motor_left(self):
         current_position = self.get_lever_angle()
